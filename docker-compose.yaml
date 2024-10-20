@@ -1,0 +1,56 @@
+version: "3.1"
+
+networks:
+  laravel:
+    driver: bridge
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - .:/var/www/app:delegated
+    depends_on:
+      - php
+    networks:
+      - laravel
+
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: php
+    restart: unless-stopped
+    tty: true
+    expose:
+      - "9000"
+    volumes:
+      - .:/var/www/app:delegated
+    networks:
+      - laravel
+    depends_on:
+      - mssql
+
+  mssql:
+    container_name: mssql-db
+    hostname: mssql-db
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: 'Y'
+      MSSQL_SA_PASSWORD: 'Passw0rd'
+      MSSQL_DATA_DIR: /var/opt/mssql/data
+      MSSQL_PID: 'Developer' 
+      MSSQL_TCP_PORT: 1433 
+    networks:
+      - laravel
+    ports: 
+      - "1433:1433"
+    volumes:
+      - ../DB/data:/var/opt/mssql/data
+      - ../DB/log:/var/opt/mssql/log
+      - ../DB/secrets:/var/opt/mssql/secrets
